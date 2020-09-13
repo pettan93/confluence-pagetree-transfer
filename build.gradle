@@ -1,0 +1,16 @@
+plugins {
+    id 'java'
+}
+
+group 'cz.kalas.knet.atlassian.utils'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    implementation group: 'com.google.code.gson', name: 'gson', version: '2.7'
+    implementation group: 'commons-io', name: 'commons-io', version: '2.6'
+}
