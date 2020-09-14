@@ -1,6 +1,7 @@
-package cz.kalas.knet.atlassian.utils.confluencePagetreeTransfer;
+package cz.kalas.knet.atlassian.utils.confluencePagetreeTransfer.importer;
 
 import com.google.gson.Gson;
+import cz.kalas.knet.atlassian.utils.confluencePagetreeTransfer.exctractor.ConfluenceExtractor;
 import cz.kalas.knet.atlassian.utils.confluencePagetreeTransfer.model.ConfluencePage;
 import cz.kalas.knet.atlassian.utils.confluencePagetreeTransfer.model.CreatePageDTO;
 import org.apache.commons.io.IOUtils;
@@ -11,12 +12,27 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class Confluence7Importer {
+/**
+ * Import pages to Confluence 7.7.3 using REST API using JSON format payload
+ * Can be used recursively (along with page-children page relationships)
+ * <p>
+ * Confluence REST API docs
+ * https://docs.atlassian.com/ConfluenceServer/rest/7.7.3/
+ * Probably will work with any Confluence prior from version 4.x.x
+ */
+public class Confluence7Importer implements ConfluenceImporter {
+
+    private static final Logger LOGGER = Logger.getLogger(Confluence7Importer.class.getName());
 
     private final Properties properties;
 
+    /**
+     * List of ids (input system) of pages, that we want skip
+     */
     private final List<Integer> skipPages;
 
     public Confluence7Importer(Properties properties) {
@@ -25,9 +41,7 @@ public class Confluence7Importer {
                 .split(","))
                 .map(Integer::parseInt)
                 .collect(Collectors.toList());
-
     }
-
 
     public void createPageTree(ConfluencePage sourceRootPage, Integer parentPageId) {
         if (skipPages.contains(sourceRootPage.sourcePageId)) return;
@@ -38,8 +52,15 @@ public class Confluence7Importer {
                 createPageTree(child, createdPageId);
             }
         }
+        LOGGER.log(Level.INFO, "creating page tree completed, root page (input system id " +
+                sourceRootPage + ") output system id :  " + createdPageId);
     }
 
+    /**
+     * Well, besides converting of newlines to html line break, there are some nontransferable illegal characters and
+     * problems with converting old wiki markup to new Confluence XHTML-based format..
+     * Lets ad-hoc fix all there problems here
+     */
     private void modifySourcePageContent(ConfluencePage sourceRootPage) {
         sourceRootPage.wikiContent =
                 sourceRootPage.wikiContent
@@ -52,21 +73,21 @@ public class Confluence7Importer {
                         .replaceAll("\\n", "<br/>")
                         .replaceAll("\\r\\n", "")
                         .replaceAll("\\\\", "");
-
     }
 
-    public Integer createPageInTargetSystem(ConfluencePage page, Integer parentPageId) {
-        return Integer.valueOf(createPage(page, parentPageId).getId());
-
+    private Integer createPageInTargetSystem(ConfluencePage page, Integer parentPageId) {
+        return Integer.valueOf(
+                createPage(page, parentPageId).getId()
+        );
     }
 
     public CreatePageDTO createPage(ConfluencePage p, Integer parentId) {
-        System.out.println("creating page with source id " + p.sourcePageId + " to " + properties.getProperty("output.url"));
+        LOGGER.log(Level.INFO, "creating page with source id " +
+                p.sourcePageId + " to " + properties.getProperty("output.url"));
 
         HttpURLConnection conn = null;
         String resultJsonString = "";
         try {
-
             CreatePageDTO pageModel = new CreatePageDTO();
             pageModel.setType("page");
             pageModel.setTitle(p.title);
@@ -74,6 +95,7 @@ public class Confluence7Importer {
             pageModel.setAncestors(String.valueOf(parentId));
             pageModel.setBodyValue(p.wikiContent);
             pageModel.setBodyRepresentation("storage");
+            // hard-coded version 1 as we create new page with first content version
             pageModel.setVersionNumber(String.valueOf(1));
 
             // HTTP REST POST
@@ -96,21 +118,18 @@ public class Confluence7Importer {
             stream.close();
 
             resultJsonString = IOUtils.toString(conn.getInputStream(), StandardCharsets.UTF_8);
-
-
+            return new Gson().fromJson(resultJsonString, CreatePageDTO.class);
         } catch (Exception e) {
             e.printStackTrace();
-
             try {
                 String error = IOUtils.toString(Objects.requireNonNull(conn).getErrorStream(), StandardCharsets.UTF_8);
-                System.out.println(error);
+                LOGGER.log(Level.INFO, error);
                 e.printStackTrace();
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
+            throw new IllegalStateException("Creating page with original id " + p.sourcePageId + " failed");
         }
-
-        return new Gson().fromJson(resultJsonString, CreatePageDTO.class);
     }
 
 

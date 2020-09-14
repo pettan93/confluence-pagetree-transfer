@@ -4,15 +4,22 @@ import com.google.gson.Gson;
 
 import java.util.Arrays;
 
+/**
+ * Data payload for Confluence API. This serialized to JSON is input for creating page using Confluence REST API
+ *
+ * https://docs.atlassian.com/ConfluenceServer/rest/7.7.3/ - Confluence newest REST API reference
+ * https://developer.atlassian.com/server/confluence/confluence-rest-api-examples/
+ *
+ */
 public class CreatePageDTO implements JsonDTO {
 
     private String id;
     private String type;
     private String title;
-    private ancestorObject[] ancestors = null;
-    private spaceObject space = new spaceObject();
-    private bodyObject body = new bodyObject();
-    private versionObject version = new versionObject();
+    private AncestorObject[] ancestors = null;
+    private SpaceObject space = new SpaceObject();
+    private BodyObject body = new BodyObject();
+    private VersionObject version = new VersionObject();
 
    public void setSpaceKey(String key) {
         this.space.setKey(key);
@@ -54,36 +61,36 @@ public class CreatePageDTO implements JsonDTO {
         this.title = title;
     }
 
-    public ancestorObject[] getAncestors() {
+    public AncestorObject[] getAncestors() {
         return ancestors;
     }
 
     public void setAncestors(String ancestorId) {
-        ancestorObject ao = new ancestorObject(ancestorId);
-        this.ancestors = new ancestorObject[]{ao};
+        AncestorObject ao = new AncestorObject(ancestorId);
+        this.ancestors = new AncestorObject[]{ao};
     }
 
-    public spaceObject getSpace() {
+    public SpaceObject getSpace() {
         return space;
     }
 
-    public void setSpace(spaceObject space) {
+    public void setSpace(SpaceObject space) {
         this.space = space;
     }
 
-    public bodyObject getBody() {
+    public BodyObject getBody() {
         return body;
     }
 
-    public void setBody(bodyObject body) {
+    public void setBody(BodyObject body) {
         this.body = body;
     }
 
-    public versionObject getVersion() {
+    public VersionObject getVersion() {
         return version;
     }
 
-    public void setVersion(versionObject version) {
+    public void setVersion(VersionObject version) {
         this.version = version;
     }
 
@@ -105,9 +112,9 @@ public class CreatePageDTO implements JsonDTO {
                 '}';
     }
 
-    class ancestorObject {
+    static class AncestorObject {
 
-        public ancestorObject(String id) {
+        public AncestorObject(String id) {
             this.id = id;
         }
 
@@ -122,7 +129,7 @@ public class CreatePageDTO implements JsonDTO {
         }
     }
 
-    class spaceObject {
+    static class SpaceObject {
 
         public String key;
 
@@ -136,20 +143,20 @@ public class CreatePageDTO implements JsonDTO {
 
     }
 
-    class bodyObject {
+    static class BodyObject {
 
-        public storageObject getStorage() {
+        public StorageObject getStorage() {
             return storage;
         }
 
-        public void setStorage(storageObject storage) {
+        public void setStorage(StorageObject storage) {
             this.storage = storage;
         }
 
-        public storageObject storage = new storageObject();
+        public StorageObject storage = new StorageObject();
     }
 
-    class storageObject {
+    static class StorageObject {
 
         public String getValue() {
             return value;
@@ -171,7 +178,7 @@ public class CreatePageDTO implements JsonDTO {
         public String representation;
     }
 
-    class versionObject {
+    static class VersionObject {
 
         public String getNumber() {
             return number;

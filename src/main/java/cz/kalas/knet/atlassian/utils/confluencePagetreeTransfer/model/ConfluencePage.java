@@ -4,7 +4,10 @@ import com.google.gson.Gson;
 
 import java.util.List;
 
-
+/**
+ * Represents page in input system
+ * It is created by parsing xml from Confluence API
+ */
 public class ConfluencePage implements JsonDTO {
 
     public Integer sourcePageId;
